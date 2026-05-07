@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Market Media</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f0e8;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: #1a1a1a;
+    color: #f5f0e8;
+    padding: 20px;
+    text-align: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .header p { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 20px;
+    background: white;
+    border-bottom: 1px solid #e8e2d8;
+  }
+  .step {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    background: #e8e2d8; color: #999;
+    transition: all 0.3s;
+  }
+  .step.active { background: #1a1a1a; color: white; }
+  .step.done { background: #4CAF50; color: white; }
+  .step-line { width: 30px; height: 2px; background: #e8e2d8; align-self: center; }
+
+  /* PAGES */
+  .page { display: none; padding: 20px; }
+  .page.active { display: block; }
+
+  .page-title {
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 6px; line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 13px; color: #666;
+    margin-bottom: 20px;
+  }
+
+  /* MODEL CARDS */
+  .models-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .model-card {
+    background: white;
+    border: 2px solid #e8e2d8;
+    border-radius: 14px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .model-card:active { transform: scale(0.96); }
+  .model-card.selected {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+    color: white;
+  }
+  .model-avatar {
+    font-size: 36px;
+    margin-bottom: 6px;
+  }
+  .model-name { font-size: 13px; font-weight: 700; }
+  .model-desc { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+
+  /* PAKET CARDS */
+  .package-card {
+    background: white;
+    border: 2px solid #e8e2d8;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .package-card:active { transform: scale(0.98); }
+  .package-card.selected {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+    color: white;
+  }
+  .package-icon { font-size: 28px; }
+  .package-name { font-size: 15px; font-weight: 700; }
+  .package-desc { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+  .package-price {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 800;
+    color: #4CAF50;
+    white-space: nowrap;
+  }
+  .package-card.selected .package-price { color: #a8e6a3; }
+
+  /* FORM */
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 6px; display: block;
+  }
+  textarea {
+    width: 100%;
+    border: 2px solid #e8e2d8;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    background: white;
+    transition: border 0.2s;
+  }
+  textarea:focus { border-color: #1a1a1a; }
+
+  /* PHOTO UPLOAD */
+  .photo-upload {
+    border: 2px dashed #e8e2d8;
+    border-radius: 14px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    background: white;
+    transition: all 0.2s;
+  }
+  .photo-upload:active { background: #f5f0e8; }
+  .photo-upload.has-photo { border-style: solid; border-color: #4CAF50; }
+  .photo-upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .photo-upload-text { font-size: 13px; color: #666; }
+  #photoInput { display: none; }
+  #photoPreview {
+    width: 100%; border-radius: 10px;
+    margin-top: 10px; display: none;
+  }
+
+  /* SUMMARY */
+  .summary-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .summary-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f5f0e8;
+    gap: 12px;
+  }
+  .summary-item:last-child { border-bottom: none; }
+  .summary-icon { font-size: 20px; }
+  .summary-label { font-size: 12px; color: #999; }
+  .summary-value { font-size: 14px; font-weight: 600; }
+
+  /* BUTTONS */
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: #1a1a1a; color: white; }
+  .btn-secondary {
+    background: white;
+    color: #1a1a1a;
+    border: 2px solid #e8e2d8;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* SUCCESS */
+  .success-page {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-icon { font-size: 64px; margin-bottom: 16px; }
+  .success-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .success-text { font-size: 14px; color: #666; line-height: 1.6; }
+  .order-number {
+    background: #1a1a1a;
+    color: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 20px 0;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .nav-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .nav-buttons .btn { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎬 AI Market Media</h1>
+  <p>Professional video reklama — 1 daqiqada</p>
+</div>
+
+<!-- STEPS -->
+<div class="steps">
+  <div class="step active" id="step1">1</div>
+  <div class="step-line"></div>
+  <div class="step" id="step2">2</div>
+  <div class="step-line"></div>
+  <div class="step" id="step3">3</div>
+  <div class="step-line"></div>
+  <div class="step" id="step4">4</div>
+</div>
+
+<!-- PAGE 1: MODEL TANLASH -->
+<div class="page active" id="page1">
+  <div class="page-title">AI Model tanlang</div>
+  <div class="page-subtitle">Brendingizga mos modelni tanlang</div>
+  <div class="models-grid">
+    <div class="model-card" onclick="selectModel(this, 'Model 1 — Yosh, zamonaviy')">
+      <div class="model-avatar">👩</div>
+      <div class="model-name">Model 1</div>
+      <div class="model-desc">Yosh, zamonaviy</div>
+    </div>
+    <div class="model-card" onclick="selectModel(this, 'Model 2 — Jiddiy, ishonchli')">
+      <div class="model-avatar">👨</div>
+      <div class="model-name">Model 2</div>
+      <div class="model-desc">Jiddiy, ishonchli</div>
+    </div>
+    <div class="model-card" onclick="selectModel(this, 'Model 3 — Erkin, energiyali')">
+      <div class="model-avatar">🧑</div>
+      <div class="model-name">Model 3</div>
+      <div class="model-desc">Erkin, energiyali</div>
+    </div>
+    <div class="model-card" onclick="selectModel(this, 'Model 4 — Milliy, nafis')">
+      <div class="model-avatar">👳</div>
+      <div class="model-name">Model 4</div>
+      <div class="model-desc">Milliy, nafis</div>
+    </div>
+    <div class="model-card" onclick="selectModel(this, 'Model 5 — Do\'stona, yaqin')">
+      <div class="model-avatar">😊</div>
+      <div class="model-name">Model 5</div>
+      <div class="model-desc">Do'stona, yaqin</div>
+    </div>
+    <div class="model-card" onclick="selectModel(this, 'Model 6 — Tajribali, yetuk')">
+      <div class="model-avatar">👴</div>
+      <div class="model-name">Model 6</div>
+      <div class="model-desc">Tajribali, yetuk</div>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn1" onclick="goToPage(2)" disabled>Davom etish →</button>
+</div>
+
+<!-- PAGE 2: PAKET TANLASH -->
+<div class="page" id="page2">
+  <div class="page-title">Paket tanlang</div>
+  <div class="page-subtitle">O'zingizga mos paketni tanlang</div>
+
+  <div class="package-card" onclick="selectPackage(this, 'Sinov — 1 ta bepul video')">
+    <div class="package-icon">🎁</div>
+    <div>
+      <div class="package-name">Sinov</div>
+      <div class="package-desc">1 ta video — sinab ko'ring</div>
+    </div>
+    <div class="package-price">BEPUL</div>
+  </div>
+
+  <div class="package-card" onclick="selectPackage(this, 'Boshlang\'ich — 5 ta video')">
+    <div class="package-icon">🚀</div>
+    <div>
+      <div class="package-name">Boshlang'ich</div>
+      <div class="package-desc">5 ta video — yangi sotuvchilar</div>
+    </div>
+    <div class="package-price">250,000 so'm</div>
+  </div>
+
+  <div class="package-card" onclick="selectPackage(this, 'Professional — 20 ta video')">
+    <div class="package-icon">⭐</div>
+    <div>
+      <div class="package-name">Professional</div>
+      <div class="package-desc">20 ta video — faol sotuvchilar</div>
+    </div>
+    <div class="package-price">800,000 so'm</div>
+  </div>
+
+  <div class="package-card" onclick="selectPackage(this, 'Custom Face — Shaxsiy AI model')">
+    <div class="package-icon">🏢</div>
+    <div>
+      <div class="package-name">Custom Face</div>
+      <div class="package-desc">Brend uchun shaxsiy AI model</div>
+    </div>
+    <div class="package-price">Kelishiladi</div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-secondary" onclick="goToPage(1)">← Orqaga</button>
+    <button class="btn btn-primary" id="btn2" onclick="goToPage(3)" disabled>Davom etish →</button>
+  </div>
+</div>
+
+<!-- PAGE 3: MATN VA RASM -->
+<div class="page" id="page3">
+  <div class="page-title">Mahsulot ma'lumotlari</div>
+  <div class="page-subtitle">Reklama matni va mahsulot rasmini kiriting</div>
+
+  <div class="form-group">
+    <label class="form-label">📝 Reklama matni</label>
+    <textarea id="adText" rows="5"
+      placeholder="Misol: Yangi iPhone 15 Pro — eng zamonaviy smartfon! Hoziroq Uzum Marketdan xarid qiling. Narxi: 12,000,000 so'm."
+      oninput="checkPage3()"></textarea>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">📸 Mahsulot rasmi (ixtiyoriy)</label>
+    <div class="photo-upload" onclick="document.getElementById('photoInput').click()" id="photoUpload">
+      <div class="photo-upload-icon">📷</div>
+      <div class="photo-upload-text">Rasmni yuklash uchun bosing</div>
+      <img id="photoPreview" alt="preview">
+    </div>
+    <input type="file" id="photoInput" accept="image/*" onchange="previewPhoto(this)">
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-secondary" onclick="goToPage(2)">← Orqaga</button>
+    <button class="btn btn-primary" id="btn3" onclick="goToPage(4)" disabled>Davom etish →</button>
+  </div>
+</div>
+
+<!-- PAGE 4: TASDIQLASH -->
+<div class="page" id="page4">
+  <div class="page-title">Buyurtmani tasdiqlang</div>
+  <div class="page-subtitle">Ma'lumotlarni tekshirib, yuborish tugmasini bosing</div>
+
+  <div class="summary-card">
+    <div class="summary-item">
+      <div class="summary-icon">🤖</div>
+      <div>
+        <div class="summary-label">Tanlangan model</div>
+        <div class="summary-value" id="sum-model">—</div>
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">📦</div>
+      <div>
+        <div class="summary-label">Paket</div>
+        <div class="summary-value" id="sum-package">—</div>
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">📝</div>
+      <div>
+        <div class="summary-label">Reklama matni</div>
+        <div class="summary-value" id="sum-text">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-secondary" onclick="goToPage(3)">← Orqaga</button>
+    <button class="btn btn-primary" onclick="submitOrder()">✅ Buyurtma berish</button>
+  </div>
+</div>
+
+<!-- PAGE 5: MUVAFFAQIYAT -->
+<div class="page" id="page5">
+  <div class="success-page">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">Buyurtma qabul qilindi!</div>
+    <div class="order-number" id="orderNumber">Buyurtma #1</div>
+    <div class="success-text">
+      Admin tez orada ko'rib chiqadi va<br>
+      Telegram orqali siz bilan bog'lanadi.<br><br>
+      <b>Taxminiy vaqt: 2–5 daqiqa</b>
+    </div>
+    <button class="btn btn-primary" style="margin-top: 24px" onclick="closeApp()">Yopish</button>
+  </div>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+// URL dan user_id olish
+const urlParams = new URLSearchParams(window.location.search);
+const userId = urlParams.get('user_id') || tg.initDataUnsafe?.user?.id || 0;
+const userName = tg.initDataUnsafe?.user?.first_name || 'Foydalanuvchi';
+
+let selectedModel = '';
+let selectedPackage = '';
+let photoBase64 = '';
+
+function selectModel(el, name) {
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedModel = name;
+  document.getElementById('btn1').disabled = false;
+}
+
+function selectPackage(el, name) {
+  document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPackage = name;
+  document.getElementById('btn2').disabled = false;
+}
+
+function checkPage3() {
+  const text = document.getElementById('adText').value.trim();
+  document.getElementById('btn3').disabled = text.length < 10;
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    photoBase64 = e.target.result;
+    const preview = document.getElementById('photoPreview');
+    preview.src = photoBase64;
+    preview.style.display = 'block';
+    document.getElementById('photoUpload').classList.add('has-photo');
+    document.querySelector('.photo-upload-text').textContent = '✅ Rasm yuklandi';
+  };
+  reader.readAsDataURL(file);
+}
+
+function goToPage(num) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page' + num).classList.add('active');
+
+  // Steps update
+  for (let i = 1; i <= 4; i++) {
+    const s = document.getElementById('step' + i);
+    s.classList.remove('active', 'done');
+    if (i < num) s.classList.add('done');
+    else if (i === num) s.classList.add('active');
+  }
+
+  // Summary update
+  if (num === 4) {
+    document.getElementById('sum-model').textContent = selectedModel;
+    document.getElementById('sum-package').textContent = selectedPackage;
+    document.getElementById('sum-text').textContent = document.getElementById('adText').value;
+  }
+
+  window.scrollTo(0, 0);
+}
+
+async function submitOrder() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Yuborilmoqda...';
+
+  try {
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        user_name: userName,
+        model: selectedModel,
+        package: selectedPackage,
+        text: document.getElementById('adText').value,
+        photo_id: null,
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('orderNumber').textContent = `Buyurtma #${data.order_id}`;
+      goToPage(5);
+      document.querySelector('.steps').style.display = 'none';
+    } else {
+      alert('Xatolik yuz berdi. Qaytadan urinib ko\'ring.');
+      btn.disabled = false;
+      btn.textContent = '✅ Buyurtma berish';
+    }
+  } catch (e) {
+    alert('Internet bilan muammo. Qaytadan urinib ko\'ring.');
+    btn.disabled = false;
+    btn.textContent = '✅ Buyurtma berish';
+  }
+}
+
+function closeApp() {
+  tg.close();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+admin.json
+orders.json
+__pycache__/
+*.pyc
+.env
