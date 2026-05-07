@@ -12,11 +12,11 @@ import logging
 import threading
 
 # ─── SOZLAMALAR ───────────────────────────────────────────────────────────────
-BOT_TOKEN = "BU_YERGA_BOT_TOKENINGIZNI_YOZING"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 ADMIN_FILE = "admin.json"
 ORDERS_FILE = "orders.json"
 PORT = int(os.environ.get("PORT", 5000))
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")  # Railway dan avtomatik
 # ──────────────────────────────────────────────────────────────────────────────
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -74,7 +74,6 @@ def update_order_status(order_id, status):
 def cmd_start(message):
     uid = message.from_user.id
 
-    # Birinchi kirgan odam admin bo'ladi
     if get_admin_id() is None:
         set_admin_id(uid)
         bot.send_message(uid,
@@ -85,8 +84,6 @@ def cmd_start(message):
         return
 
     name = message.from_user.first_name or "Foydalanuvchi"
-
-    # Mini App tugmasi
     webapp = types.WebAppInfo(url=f"{WEBHOOK_URL}/app?user_id={uid}")
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton("🎬 Video reklama buyurtma qilish", web_app=webapp))
@@ -115,7 +112,7 @@ def cmd_orders(message):
         bot.reply_to(message, "📭 Hali buyurtmalar yo'q.")
         return
 
-    for o in orders[-10:]:  # Oxirgi 10 ta
+    for o in orders[-10:]:
         status_emoji = {"yangi": "🆕", "jarayonda": "⏳", "tayyor": "✅", "bekor": "❌"}.get(o["status"], "📦")
         text = (
             f"{status_emoji} <b>Buyurtma #{o['id']}</b>\n"
@@ -131,10 +128,7 @@ def cmd_orders(message):
             types.InlineKeyboardButton("✅ Tayyor", callback_data=f"status_{o['id']}_tayyor"),
             types.InlineKeyboardButton("❌ Bekor", callback_data=f"status_{o['id']}_bekor"),
         )
-        if o.get("photo_id"):
-            bot.send_photo(message.chat.id, o["photo_id"], caption=text, reply_markup=keyboard)
-        else:
-            bot.send_message(message.chat.id, text, reply_markup=keyboard)
+        bot.send_message(message.chat.id, text, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("status_"))
@@ -148,14 +142,13 @@ def handle_status(call):
     new_status = parts[2]
     update_order_status(order_id, new_status)
 
-    # Foydalanuvchiga xabar yuborish
     orders = get_orders()
     order = next((o for o in orders if o["id"] == order_id), None)
     if order and order.get("user_id"):
         status_text = {
             "jarayonda": "⏳ Buyurtmangiz <b>jarayonda</b>! Tez orada tayyor bo'ladi.",
             "tayyor": "✅ Buyurtmangiz <b>tayyor</b>! Video tez orada yuboriladi.",
-            "bekor": "❌ Buyurtmangiz <b>bekor qilindi</b>. Muammo bo'lsa admin bilan bog'laning.",
+            "bekor": "❌ Buyurtmangiz <b>bekor qilindi</b>.",
         }.get(new_status, "")
         if status_text:
             try:
@@ -163,7 +156,7 @@ def handle_status(call):
             except Exception:
                 pass
 
-    bot.answer_callback_query(call.id, f"✅ Status yangilandi: {new_status}")
+    bot.answer_callback_query(call.id, f"✅ Status: {new_status}")
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
 
 
@@ -188,7 +181,6 @@ def create_order():
         model = data.get("model", "-")
         package = data.get("package", "-")
         text = data.get("text", "-")
-        photo_id = data.get("photo_id", None)
 
         order = {
             "user_id": user_id,
@@ -196,16 +188,13 @@ def create_order():
             "model": model,
             "package": package,
             "text": text,
-            "photo_id": photo_id,
         }
         order_id = save_order(order)
 
-        # Adminga xabar
         admin_id = get_admin_id()
         if admin_id:
-            status_emoji = "🆕"
             msg = (
-                f"{status_emoji} <b>Yangi buyurtma #{order_id}!</b>\n\n"
+                f"🆕 <b>Yangi buyurtma #{order_id}!</b>\n\n"
                 f"👤 Foydalanuvchi: {user_name} (ID: {user_id})\n"
                 f"🤖 Model: {model}\n"
                 f"📦 Paket: {package}\n"
@@ -220,9 +209,8 @@ def create_order():
             try:
                 bot.send_message(admin_id, msg, reply_markup=keyboard)
             except Exception as e:
-                log.error(f"Admin xabar yuborishda xato: {e}")
+                log.error(f"Admin xabar: {e}")
 
-        # Foydalanuvchiga tasdiqlash
         try:
             bot.send_message(
                 user_id,
@@ -230,35 +218,37 @@ def create_order():
                 f"🤖 Model: {model}\n"
                 f"📦 Paket: {package}\n"
                 f"📝 Matn: {text}\n\n"
-                "⏳ Tez orada admin ko'rib chiqadi va siz bilan bog'lanadi!"
+                "⏳ Tez orada admin ko'rib chiqadi!"
             )
         except Exception as e:
-            log.error(f"Foydalanuvchiga xabar yuborishda xato: {e}")
+            log.error(f"Foydalanuvchi xabar: {e}")
 
         return jsonify({"success": True, "order_id": order_id})
     except Exception as e:
-        log.error(f"Buyurtma yaratishda xato: {e}")
+        log.error(f"Buyurtma xato: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route(f"/webhook/{BOT_TOKEN}", methods=["POST"])
+@app.route(f"/webhook", methods=["POST"])
 def webhook():
-    update = telebot.types.Update.de_json(request.data.decode("utf-8"))
-    bot.process_new_updates([update])
+    if request.headers.get("content-type") == "application/json":
+        update = telebot.types.Update.de_json(request.data.decode("utf-8"))
+        bot.process_new_updates([update])
     return "OK", 200
 
 
 # ─── ISHGA TUSHIRISH ──────────────────────────────────────────────────────────
 
-def start_bot():
-    if WEBHOOK_URL:
-        bot.remove_webhook()
-        bot.set_webhook(url=f"{WEBHOOK_URL}/webhook/{BOT_TOKEN}")
-        log.info(f"Webhook o'rnatildi: {WEBHOOK_URL}")
-    else:
-        # Local test uchun polling
-        threading.Thread(target=bot.infinity_polling, daemon=True).start()
+def setup_webhook():
+    if WEBHOOK_URL and BOT_TOKEN:
+        try:
+            bot.remove_webhook()
+            result = bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
+            log.info(f"Webhook: {result}")
+        except Exception as e:
+            log.error(f"Webhook xato: {e}")
+
+setup_webhook()
 
 if __name__ == "__main__":
-    start_bot()
     app.run(host="0.0.0.0", port=PORT)
